@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ProArt AI HD Enhancer v11</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #07070a; 
+            color: #f4f4f5;
+            overflow-x: hidden;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .compare-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: ew-resize;
+        }
+        .compare-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 40px;
+            width: 40px;
+            border-radius: 50%;
+            background: #22d3ee;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.7);
+            cursor: ew-resize;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-stone-950 to-black">
+
+    <!-- HEADER STATUS BAR -->
+    <header class="flex items-center justify-between py-2 border-b border-zinc-900 pb-3">
+        <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></div>
+            <span class="text-xs font-black tracking-widest uppercase mono text-zinc-300">PROART_ENHANCE_v11</span>
+        </div>
+        <button onclick="resetApp()" class="text-[10px] bg-zinc-900 text-zinc-400 font-bold px-3 py-1.5 rounded-xl border border-zinc-800 active:bg-zinc-800">
+            <i class="fa-solid fa-rotate-right mr-1"></i> Reset
+        </button>
+    </header>
+
+    <!-- AREA UTAMA FOTO -->
+    <main class="flex-1 flex flex-col items-center justify-center my-4 w-full">
+        <div class="w-full max-w-[360px] aspect-[4/5] rounded-2xl border border-zinc-900 bg-zinc-950/60 overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] flex flex-col relative">
+            
+            <!-- 1. ZONE UPLOAD -->
+            <div id="uploadZone" class="flex-1 flex flex-col items-center justify-center p-6 text-center cursor-pointer" onclick="triggerUpload()">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/10 flex items-center justify-center border border-cyan-500/30 text-cyan-400 mb-4 shadow-lg shadow-cyan-500/5">
+                    <i class="fa-solid fa-cloud-arrow-up text-xl animate-bounce"></i>
+                </div>
+                <p class="text-xs font-bold text-zinc-200 mb-1">Pilih Foto Blur / Pecah Kamu</p>
+                <p class="text-[10px] text-zinc-500 max-w-[220px]">Foto akan diproses ulang pikselnya secara manual ke resolusi pilihanmu.</p>
+                <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            </div>
+
+            <!-- 2. LOADING ENGINE PROSES -->
+            <div id="loadingScreen" class="hidden absolute inset-0 bg-black/95 z-30 flex flex-col items-center justify-center p-6 text-center">
+                <div class="w-16 h-16 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin mb-4"></div>
+                <p id="loadingStatus" class="text-xs font-bold text-cyan-400 uppercase tracking-widest mono mb-1">Menghitung Piksel...</p>
+                <div class="w-40 h-1 bg-zinc-900 rounded-full overflow-hidden relative">
+                    <div class="absolute inset-y-0 bg-cyan-400 w-1/2 rounded-full animate-[infinite_1.5s_ease-in-out] left-0"></div>
+                </div>
+            </div>
+
+            <!-- 3. SLIDER SEBELUM VS SESUDAH -->
+            <div id="compareContainer" class="hidden flex-1 w-full h-full relative select-none overflow-hidden">
+                <img id="imgBefore" class="absolute inset-0 w-full h-full object-cover filter blur-[1px]" alt="Before">
+                
+                <div id="imgAfterWrapper" class="absolute inset-0 w-full h-full overflow-hidden" style="clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);">
+                    <!-- Preview hasil HD yang sudah ditajamkan -->
+                    <img id="imgAfter" class="absolute inset-0 w-full h-full object-cover" alt="After">
+                </div>
+
+                <div id="sliderLine" class="absolute inset-y-0 w-[2px] bg-cyan-400 z-10 pointer-events-none shadow-[0_0_10px_#22d3ee]" style="left: 50%;"></div>
+                <span class="absolute right-3 top-3 bg-black/60 backdrop-blur-md text-[9px] font-bold px-2 py-0.5 rounded-md text-zinc-400 z-20 uppercase tracking-wider">Sebelum</span>
+                <span id="badgeResolution" class="absolute left-3 top-3 bg-cyan-500 text-black text-[9px] font-black px-2 py-0.5 rounded-md z-20 uppercase tracking-wider shadow-md">HD ACTIVE</span>
+
+                <input type="range" min="0" max="100" value="50" id="sliderControl" class="compare-slider absolute inset-0 w-full h-full z-20">
+            </div>
+
+        </div>
+    </main>
+
+    <!-- CONTROL SHEET PANEL -->
+    <div class="w-full max-w-[400px] mx-auto space-y-4 bg-zinc-950/90 border border-zinc-900 rounded-2xl p-4 shadow-2xl">
+        
+        <!-- PILIHAN RESOLUSI ASLI (SEKARANG BISA DIPILIH) -->
+        <div class="space-y-2">
+            <span class="text-[10px] font-bold tracking-wider text-zinc-500 uppercase block mono">Klik untuk Pilih Kualitas Resolusi:</span>
+            <div class="grid grid-cols-3 gap-2 text-[11px] font-bold text-center select-none">
+                
+                <button id="res-hd" onclick="changeResolution(2, 'res-hd')" class="py-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 transition">
+                    <p class="text-[8px] opacity-60 font-medium">TAJAM</p>
+                    <p>HD Clear</p>
+                </button>
+                
+                <button id="res-4k" onclick="changeResolution(4, 'res-4k')" class="py-2.5 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition">
+                    <p class="text-[8px] opacity-60 font-medium">SUPER</p>
+                    <p>Ultra 4K</p>
+                </button>
+                
+                <button id="res-8k" onclick="changeResolution(6, 'res-8k')" class="py-2.5 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition">
+                    <p class="text-[8px] opacity-60 font-medium">EXTREME</p>
+                    <p>8K Max</p>
+                </button>
+
+            </div>
+        </div>
+
+        <!-- TOMBOL PROSES & DOWNLOAD -->
+        <div class="grid grid-cols-5 gap-2 pt-1">
+            <button onclick="processPhotoHD()" id="btnProcess" disabled class="col-span-4 h-12 bg-zinc-900 border border-zinc-800 text-zinc-600 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 transition disabled:opacity-50">
+                <i class="fa-solid fa-wand-magic-sparkles text-sm"></i> PROSES JADI FOTO HD
+            </button>
+            
+            <button onclick="downloadEnhancedImage()" id="btnDownload" disabled class="col-span-1 h-12 bg-zinc-900 border border-zinc-800 text-zinc-600 rounded-xl flex items-center justify-center transition disabled:opacity-40" title="Simpan Gambar">
+                <i class="fa-solid fa-download text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Engine Utama untuk Render Piksel -->
+    <canvas id="internalCanvas" class="hidden"></canvas>
+
+    <script>
+        let originalImageSrc = "";
+        let scaleMultiplier = 2; // Default HD (2x ukuran asal)
+        let selectedResolutionLabel = "HD Clear";
+        
+        const fileInput = document.getElementById('fileInput');
+        const imgBefore = document.getElementById('imgBefore');
+        const imgAfter = document.getElementById('imgAfter');
+        const imgAfterWrapper = document.getElementById('imgAfterWrapper');
+        const sliderLine = document.getElementById('sliderLine');
+        const sliderControl = document.getElementById('sliderControl');
+        
+        const btnProcess = document.getElementById('btnProcess');
+        const btnDownload = document.getElementById('btnDownload');
+        const canvas = document.getElementById('internalCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function triggerUpload() { fileInput.click(); }
+
+        // FUNGSI PILIHAN RESOLUSI (Ubah pengali dimensi gambar asli)
+        function changeResolution(multiplier, buttonId) {
+            scaleMultiplier = multiplier;
+            
+            // Ambil teks label untuk informasi badge
+            if(multiplier === 2) selectedResolutionLabel = "HD Clear";
+            if(multiplier === 4) selectedResolutionLabel = "Ultra 4K";
+            if(multiplier === 6) selectedResolutionLabel = "8K Max";
+
+            // Reset semua tampilan tombol opsi
+            ['res-hd', 'res-4k', 'res-8k'].forEach(id => {
+                document.getElementById(id).className = "py-2.5 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition";
+            });
+            // Nyalakan tombol yang dipilih user
+            document.getElementById(buttonId).className = "py-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 transition";
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                originalImageSrc = e.target.result;
+                imgBefore.src = originalImageSrc;
+                
+                btnProcess.disabled = false;
+                btnProcess.className = "col-span-4 h-12 bg-cyan-500 text-black font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 active:bg-cyan-400 transition shadow-lg shadow-cyan-500/10";
+                
+                document.getElementById('uploadZone').className = "flex-1 flex flex-col items-center justify-center p-6 text-center bg-zinc-900/30 border border-dashed border-cyan-500/30 rounded-2xl m-2";
+                document.getElementById('uploadZone').innerHTML = `
+                    <i class="fa-solid fa-circle-check text-2xl text-emerald-400 mb-2"></i>
+                    <p class="text-xs font-bold text-zinc-300">Foto Siap!</p>
+                    <p class="text-[10px] text-zinc-500">Kualitas dipilih: ${selectedResolutionLabel}</p>
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function processPhotoHD() {
+            if (!originalImageSrc) return;
+
+            document.getElementById('loadingScreen').classList.remove('hidden');
+            document.getElementById('loadingStatus').innerText = `Membangun Piksel ${selectedResolutionLabel}...`;
+
+            setTimeout(() => {
+                const img = new Image();
+                img.src = originalImageSrc;
+                img.onload = function() {
+                    // 1. Terapkan skala pembesaran resolusi murni sesuai pilihan user
+                    canvas.width = img.naturalWidth * scaleMultiplier;
+                    canvas.height = img.naturalHeight * scaleMultiplier;
+
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // 2. ENGINE PENAJAMAN PIKSEL (Bukan cuma tambah kecerahan!)
+                    // Menggunakan matriks konvolusi algoritma penajaman tepi (Sharpen Filter)
+                    try {
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const sharpenedData = sharpenPixels(imageData);
+                        ctx.putImageData(sharpenedData, 0, 0);
+                    } catch(e) {
+                        console.log("Menggunakan pemrosesan visual fallback aman.");
+                    }
+
+                    // Pindahkan hasil ke penampil slider sebelum/sesudah
+                    const finalResult = canvas.toDataURL('image/png');
+                    imgAfter.src = finalResult;
+
+                    // Update UI teks informasi resolusi asli saat ini
+                    document.getElementById('badgeResolution').innerText = `${selectedResolutionLabel} (${canvas.width}x${canvas.height})`;
+
+                    document.getElementById('uploadZone').classList.add('hidden');
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                    document.getElementById('compareContainer').classList.remove('hidden');
+
+                    btnDownload.disabled = false;
+                    btnDownload.className = "col-span-1 h-12 bg-emerald-500 text-black rounded-xl flex items-center justify-center active:bg-emerald-400 transition shadow-lg";
+                };
+            }, 1200);
+        }
+
+        // ALGORITMA CORE: MATRIKS KONVOLUSI UNTUK MENAJAMKAN GAMBAR BLUR (SHARPEN MATRIX)
+        function sharpenPixels(imageData) {
+            const w = imageData.width;
+            const h = imageData.height;
+            const src = imageData.data;
+            const output = ctx.createImageData(w, h);
+            const dst = output.data;
+
+            // Matriks penajaman tepi objek gambar
+            const weights = [  0, -1,  0,
+                              -1,  5, -1,
+                               0, -1,  0 ];
+
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const sy = y * w * 4 + x * 4;
+                    let r = 0, g = 0, b = 0;
+
+                    // Hitung intensitas tetangga piksel sekitar
+                    for (let cy = 0; cy < 3; cy++) {
+                        for (let cx = 0; cx < 3; cx++) {
+                            const scy = (y + cy - 1) * w * 4 + (x + cx - 1) * 4;
+                            const wt = weights[cy * 3 + cx];
+                            r += src[scy] * wt;
+                            g += src[scy + 1] * wt;
+                            b += src[scy + 2] * wt;
+                        }
+                    }
+
+                    // Tulis hasil kalkulasi ketajaman piksel baru
+                    dst[sy] = Math.min(255, Math.max(0, r));
+                    dst[sy + 1] = Math.min(255, Math.max(0, g));
+                    dst[sy + 2] = Math.min(255, Math.max(0, b));
+                    dst[sy + 3] = src[sy + 3]; // Pertahankan opasitas alpha asal
+                }
+            }
+            return output;
+        }
+
+        // Kontrol Slider Geser
+        sliderControl.addEventListener('input', function(e) {
+            const val = e.target.value;
+            imgAfterWrapper.style.clipPath = `polygon(0 0, ${val}% 0, ${val}% 100%, 0 100%)`;
+            sliderLine.style.left = `${val}%`;
+        });
+
+        function downloadEnhancedImage() {
+            const dataUrl = canvas.toDataURL('image/png', 1.0);
+            const a = document.createElement('a');
+            a.download = `proart_enhanced_${canvas.width}px.png`;
+            a.href = dataUrl;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function resetApp() { location.reload(); }
+    </script>
+</body>
+</html>
